@@ -63,7 +63,7 @@ module OmniAuth
 
       credentials do
         {
-            id_token: access_token.id_token,
+            id_token: decode_id_token(access_token.id_token),
             token: access_token.access_token,
             refresh_token: access_token.refresh_token,
             expires_in: access_token.expires_in,
@@ -109,7 +109,6 @@ module OmniAuth
         fail!(:failed_to_connect, e)
       end
 
-
       def authorization_code
         request.params["code"]
       end
@@ -148,29 +147,28 @@ module OmniAuth
       end
 
       def user_info
-        @user_info ||= access_token.userinfo!
+        @user_info ||= decode_id_token(access_token.id_token)
       end
 
       def access_token
         @access_token ||= lambda {
           _access_token = client.access_token!(
-          scope: options.scope,
-          client_auth_method: options.client_auth_method
+            scope: options.scope,
+            client_auth_method: options.client_auth_method
           )
           _id_token = decode_id_token _access_token.id_token
           _id_token.verify!(
-              issuer: options.issuer,
-              client_id: client_options.identifier,
-              nonce: stored_nonce
+            issuer: options.issuer,
+            client_id: client_options.identifier,
+            nonce: stored_nonce
           )
           _access_token
         }.call()
       end
 
       def decode_id_token(id_token)
-        ::OpenIDConnect::ResponseObject::IdToken.decode(id_token, public_key)
+        ::OpenIDConnect::ResponseObject::IdToken.decode(id_token, nil)
       end
-
 
       def client_options
         options.client_options
